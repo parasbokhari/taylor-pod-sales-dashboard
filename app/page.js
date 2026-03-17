@@ -1,64 +1,54 @@
-import Image from "next/image";
+import { fetchSubmissions } from "@/lib/api";
+import StatsCards from "@/components/StatsCards";
+import SubmissionsChart from "@/components/SubmissionsChart";
+import SubmissionsTable from "@/components/SubmissionsTable";
 
-export default function Home() {
+export const revalidate = 60;
+
+export default async function DashboardPage() {
+  let submissions = [];
+  let error = null;
+
+  try {
+    submissions = await fetchSubmissions();
+  } catch (e) {
+    error = e.message;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-[#f8f8f7]">
+      {/* Header */}
+      <header className="bg-white border-b border-[#e8e8e6] sticky top-0 z-10">
+        <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-md bg-[#2458f1] flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1h2l1.5 6h5l1-4H3.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="5.5" cy="10.5" r="0.75" fill="white"/>
+                <circle cx="9" cy="10.5" r="0.75" fill="white"/>
+              </svg>
+            </div>
+            <span className="text-sm font-semibold text-[#1a1a18]">Cart Submissions</span>
+          </div>
+          <span className="text-xs text-[#b8b8b2]">Auto-refreshes every 60s</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="max-w-[1280px] mx-auto px-6 py-8">
+        {error && (
+          <div className="bg-[#fef2f2] border border-[#fecaca] text-[#dc2626] rounded-xl p-4 mb-6 text-sm">
+            Failed to load submissions: {error}
+          </div>
+        )}
+
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-[#1a1a18]">Dashboard</h1>
+          <p className="text-sm text-[#9c9c96] mt-0.5">HubDB table · {submissions.length} total records</p>
         </div>
+
+        <StatsCards submissions={submissions} />
+        <SubmissionsChart submissions={submissions} />
+        <SubmissionsTable submissions={submissions} />
       </main>
     </div>
   );
