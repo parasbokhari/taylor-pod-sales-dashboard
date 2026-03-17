@@ -4,6 +4,7 @@ import SubmissionsChart from "@/components/SubmissionsChart";
 import SubmissionsTable from "@/components/SubmissionsTable";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart } from "lucide-react";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const revalidate = 10;
 
@@ -29,10 +30,11 @@ export default async function DashboardPage() {
             <span className="text-sm font-semibold">Cart Submissions</span>
           </div>
           <span className="text-xs text-muted-foreground">
-            Auto-refreshes every 60s
+            Auto-refreshes every 30s
           </span>
         </div>
       </header>
+      <AutoRefresh intervalMs={30000} />
 
       <main className="max-w-screen-xl mx-auto px-6 py-8">
         {error && (
