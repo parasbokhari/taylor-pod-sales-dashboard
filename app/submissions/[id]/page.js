@@ -14,14 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Mail, Calendar, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Mail, Calendar } from "lucide-react";
 import CartDataSection from "@/components/CartDataSection";
 
 export const revalidate = 60;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  // id here is the submission_id value e.g. "pod-c-209462624646"
   const submission = await fetchSubmissionById(id);
   const { first_name, last_name } = submission?.values ?? {};
   const fullName =
@@ -59,7 +58,6 @@ export default async function SubmissionDetailPage({ params }) {
       fetchSubmissions(),
     ]);
   } catch (e) {
-    // API error — show not found rather than crashing
     console.error("Failed to fetch submission:", e.message);
     notFound();
   }
@@ -74,7 +72,6 @@ export default async function SubmissionDetailPage({ params }) {
     [first_name?.[0], last_name?.[0]].filter(Boolean).join("").toUpperCase() ||
     "?";
 
-  // Count all submissions sharing the same email
   const totalOrdersByEmail = email
     ? allSubmissions.filter((s) => s.values?.email === email).length
     : null;
@@ -122,9 +119,11 @@ export default async function SubmissionDetailPage({ params }) {
             </div>
           </div>
         )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left column */}
+          {/* ── Left column ── */}
           <div className="space-y-4">
+            {/* Contact card */}
             <Card>
               <CardContent className="pt-6 text-center">
                 <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center text-lg font-semibold text-black mx-auto mb-4">
@@ -160,6 +159,7 @@ export default async function SubmissionDetailPage({ params }) {
               </CardContent>
             </Card>
 
+            {/* Metadata */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
@@ -188,12 +188,8 @@ export default async function SubmissionDetailPage({ params }) {
                 </dl>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right column */}
-          <div className="lg:col-span-2 space-y-4">
-            <CartDataSection cartData={cart_data ?? null} />
-
+            {/* All field values */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
@@ -244,6 +240,7 @@ export default async function SubmissionDetailPage({ params }) {
               </CardContent>
             </Card>
 
+            {/* Raw JSON */}
             <Card>
               <details className="group">
                 <summary className="list-none cursor-pointer px-6 py-4 flex items-center justify-between">
@@ -260,6 +257,12 @@ export default async function SubmissionDetailPage({ params }) {
                 </CardContent>
               </details>
             </Card>
+          </div>
+          {/* ── end left column ── */}
+
+          {/* ── Right column — cart data only ── */}
+          <div className="lg:col-span-2 space-y-4">
+            <CartDataSection cartData={cart_data ?? null} />
           </div>
         </div>
       </main>
