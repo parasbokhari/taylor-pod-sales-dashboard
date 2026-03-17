@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft, Mail, Calendar, ShoppingCart } from "lucide-react";
+import CartDataSection from "@/components/CartDataSection";
 
 export const revalidate = 60;
 
@@ -44,49 +45,6 @@ function Field({ label, value, mono = false }) {
         )}
       </dd>
     </div>
-  );
-}
-
-function CartDataSection({ cartData }) {
-  // cart_data being absent never blocks the page — just shows a placeholder
-  if (!cartData) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <ShoppingCart className="w-4 h-4" />
-            Cart Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No{" "}
-            <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
-              cart_data
-            </code>{" "}
-            on this submission yet. Share the field shape and this section will
-            be updated to render line items, quantities, SKUs, etc.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4" />
-          Cart Data
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* TODO: replace pre with real line-items table once you share the cart_data shape */}
-        <pre className="text-xs bg-muted rounded-lg p-4 overflow-x-auto leading-relaxed">
-          {JSON.stringify(cartData, null, 2)}
-        </pre>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -121,6 +79,12 @@ export default async function SubmissionDetailPage({ params }) {
     ? allSubmissions.filter((s) => s.values?.email === email).length
     : null;
 
+  const { submission_id } = values;
+  const duplicates = submission_id
+    ? allSubmissions.filter((s) => s.values?.submission_id === submission_id)
+    : [];
+  const hasDuplicates = duplicates.length > 1;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-background border-b">
@@ -142,6 +106,22 @@ export default async function SubmissionDetailPage({ params }) {
       </header>
 
       <main className="max-w-screen-xl mx-auto px-6 py-8">
+        {hasDuplicates && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 mb-6 text-sm">
+            <span className="text-lg leading-none">⚠️</span>
+            <div>
+              <p className="font-semibold">Duplicate submission ID detected</p>
+              <p className="text-amber-700 mt-0.5">
+                {duplicates.length} rows share the submission ID{" "}
+                <code className="font-mono text-xs bg-amber-100 px-1 py-0.5 rounded">
+                  {submission_id}
+                </code>
+                . Only the first match is shown. You may want to investigate and
+                remove the duplicate{duplicates.length > 2 ? "s" : ""} in HubDB.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Left column */}
           <div className="space-y-4">

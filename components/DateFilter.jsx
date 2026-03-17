@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
+  { label: "Today", days: 0 },
   { label: "Last 7 days", days: 7 },
   { label: "Last 30 days", days: 30 },
   { label: "Last 90 days", days: 90 },
@@ -29,8 +30,13 @@ export default function DateFilter({ onChange }) {
   function applyPreset(days) {
     const to = new Date();
     const from = new Date();
-    from.setDate(to.getDate() - days);
-    from.setHours(0, 0, 0, 0);
+    if (days === 0) {
+      // Today: midnight to end of day
+      from.setHours(0, 0, 0, 0);
+    } else {
+      from.setDate(to.getDate() - days);
+      from.setHours(0, 0, 0, 0);
+    }
     to.setHours(23, 59, 59, 999);
     setActivePreset(days);
     setRange({ from, to });
