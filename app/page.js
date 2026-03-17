@@ -2,6 +2,8 @@ import { fetchSubmissions } from "@/lib/api";
 import StatsCards from "@/components/StatsCards";
 import SubmissionsChart from "@/components/SubmissionsChart";
 import SubmissionsTable from "@/components/SubmissionsTable";
+import { Separator } from "@/components/ui/separator";
+import { ShoppingCart } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -16,35 +18,37 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f7]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#e8e8e6] sticky top-0 z-10">
-        <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-md bg-[#2458f1] flex items-center justify-center">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1h2l1.5 6h5l1-4H3.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="5.5" cy="10.5" r="0.75" fill="white"/>
-                <circle cx="9" cy="10.5" r="0.75" fill="white"/>
-              </svg>
+    <div className="min-h-screen bg-background">
+      {/* Header — not sticky */}
+      <header className="bg-background border-b">
+        <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+              <ShoppingCart className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="text-sm font-semibold text-[#1a1a18]">Cart Submissions</span>
+            <span className="text-sm font-semibold">Cart Submissions</span>
           </div>
-          <span className="text-xs text-[#b8b8b2]">Auto-refreshes every 60s</span>
+          <span className="text-xs text-muted-foreground">
+            Auto-refreshes every 60s
+          </span>
         </div>
       </header>
 
-      <main className="max-w-[1280px] mx-auto px-6 py-8">
+      <main className="max-w-screen-xl mx-auto px-6 py-8">
         {error && (
-          <div className="bg-[#fef2f2] border border-[#fecaca] text-[#dc2626] rounded-xl p-4 mb-6 text-sm">
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-4 mb-6 text-sm">
             Failed to load submissions: {error}
           </div>
         )}
 
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-[#1a1a18]">Dashboard</h1>
-          <p className="text-sm text-[#9c9c96] mt-0.5">HubDB table · {submissions.length} total records</p>
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            HubDB table · {submissions.length} total records
+          </p>
         </div>
+
+        <Separator className="mb-6" />
 
         <StatsCards submissions={submissions} />
         <SubmissionsChart submissions={submissions} />
