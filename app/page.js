@@ -5,7 +5,7 @@ import SubmissionsTable from "@/components/SubmissionsTable";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart } from "lucide-react";
 
-export const revalidate = 60;
+export const revalidate = 10;
 
 export default async function DashboardPage() {
   let submissions = [];

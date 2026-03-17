@@ -17,7 +17,7 @@ import {
 import { ArrowLeft, Mail, Calendar } from "lucide-react";
 import CartDataSection from "@/components/CartDataSection";
 
-export const revalidate = 60;
+export const revalidate = 10;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
