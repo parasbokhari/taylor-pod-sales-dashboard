@@ -2,9 +2,9 @@ import { fetchSubmissions } from "@/lib/api";
 import StatsCards from "@/components/StatsCards";
 import SubmissionsChart from "@/components/SubmissionsChart";
 import SubmissionsTable from "@/components/SubmissionsTable";
-import { Separator } from "@/components/ui/separator";
-import { ShoppingCart } from "lucide-react";
 import AutoRefresh from "@/components/AutoRefresh";
+import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
 
 export const revalidate = 10;
 
@@ -20,14 +20,25 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header — not sticky */}
       <header className="bg-background border-b">
         <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <ShoppingCart className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-semibold">Cart Submissions</span>
+          <div className="flex items-center gap-3">
+            <Image
+              src="https://www.taylor.com/hubfs/_Taylor.com%20-%20All%20file%20connected%20%20to%20main%20site%20and%20blogs/dev/Logo.svg"
+              alt="Taylor"
+              width={80}
+              height={24}
+              className="shrink-0"
+              unoptimized
+            />
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-sm font-semibold">
+              Print on Demand Catalog
+              <span className="text-muted-foreground font-normal mx-1.5">
+                |
+              </span>
+              Cart Submissions
+            </span>
           </div>
           <span className="text-xs text-muted-foreground">
             Auto-refreshes every 30s

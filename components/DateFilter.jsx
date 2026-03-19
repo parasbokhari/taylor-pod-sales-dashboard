@@ -110,7 +110,9 @@ export default function DateFilter({ onChange }) {
             mode="single"
             selected={range.from}
             onSelect={handleFromSelect}
-            disabled={(date) => (range.to ? date > range.to : false)}
+            disabled={(date) =>
+              date > new Date() || (range.to ? date > range.to : false)
+            }
             captionLayout="dropdown"
             fromYear={2020}
             toYear={new Date().getFullYear()}
@@ -145,7 +147,9 @@ export default function DateFilter({ onChange }) {
             mode="single"
             selected={range.to}
             onSelect={handleToSelect}
-            disabled={(date) => (range.from ? date < range.from : false)}
+            disabled={(date) =>
+              date > new Date() || (range.from ? date < range.from : false)
+            }
             captionLayout="dropdown"
             fromYear={2020}
             toYear={new Date().getFullYear()}

@@ -31,7 +31,7 @@
   box-sizing: border-box;
 }
 
-/* Calendar day hover — forces gray bg on unselected dates */
+/* Calendar day hover */
 [data-slot="calendar"]
   button:not([data-selected-single="true"]):not([data-range-start="true"]):not(
     [data-range-end="true"]
