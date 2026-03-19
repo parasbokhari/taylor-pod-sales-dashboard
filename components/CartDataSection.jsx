@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Package, ShoppingCart } from "lucide-react";
+import Image from "next/image";
+import {
+  ChevronDown,
+  ChevronRight,
+  Package,
+  ShoppingCart,
+  ExternalLink,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +20,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Collect all unique attribute keys across variants of a product
+// Change this if the product guide URL prefix ever changes
+const PRODUCT_BASE_URL = "https://taylor.com/product-guide/";
+
 function getAttributeKeys(variants) {
   const keys = new Set();
   variants.forEach((v) => {
@@ -25,28 +34,52 @@ function getAttributeKeys(variants) {
 function ProductRow({ product }) {
   const [open, setOpen] = useState(false);
   const attrKeys = getAttributeKeys(product.variants ?? []);
+  const hasImage = !!product.image_url;
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      {/* Product header — clickable to expand */}
+      {/* Product header */}
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-black/5 flex items-center justify-center shrink-0">
-            <Package className="w-3.5 h-3.5 text-black/40" />
+          {/* Product image or fallback icon */}
+          <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+            {hasImage ? (
+              <Image
+                src={product.image_url}
+                alt={product.product_name}
+                width={40}
+                height={40}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <Package className="w-4 h-4 text-gray-400" />
+            )}
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">
               {product.product_name}
             </p>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">
-              {product.product_slug}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-xs text-muted-foreground font-mono">
+                {product.product_slug}
+              </p>
+              <a
+                href={`${PRODUCT_BASE_URL}${product.product_slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-4">
+
+        <div className="flex items-center gap-2 shrink-0 ml-4">
           <Badge variant="secondary" className="tabular-nums">
             {product.sku_count} SKU{product.sku_count !== 1 ? "s" : ""}
           </Badge>
@@ -119,7 +152,6 @@ export default function CartDataSection({ cartData }) {
     );
   }
 
-  // cart_data comes as a JSON string from HubDB — parse it
   let parsed;
   try {
     parsed = typeof cartData === "string" ? JSON.parse(cartData) : cartData;
