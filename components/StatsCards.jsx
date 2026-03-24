@@ -8,12 +8,12 @@ export default function StatsCards({ submissions }) {
   const now = Date.now();
 
   const last7Days = submissions.filter((s) => {
-    const ts = s.values?.submitted_at ?? new Date(s.createdAt).getTime();
+    const ts = new Date(s.submitted_at).getTime();
     return now - ts < 7 * 24 * 60 * 60 * 1000;
   }).length;
 
   const last30Days = submissions.filter((s) => {
-    const ts = s.values?.submitted_at ?? new Date(s.createdAt).getTime();
+    const ts = new Date(s.submitted_at).getTime();
     return now - ts < 30 * 24 * 60 * 60 * 1000;
   }).length;
 

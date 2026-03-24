@@ -152,6 +152,7 @@ export default function CartDataSection({ cartData }) {
     );
   }
 
+  // cart_data may be a parsed object (new Val Town API) or a JSON string (legacy)
   let parsed;
   try {
     parsed = typeof cartData === "string" ? JSON.parse(cartData) : cartData;
@@ -174,6 +175,24 @@ export default function CartDataSection({ cartData }) {
   }
 
   const { products = [], total_skus } = parsed;
+
+  if (products.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4" />
+            Cart Data
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            This submission has no products in the cart.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

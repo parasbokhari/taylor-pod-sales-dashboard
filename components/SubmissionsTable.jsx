@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, useRef, useTransition } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,65 +14,125 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+  Search,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  X,
+} from "lucide-react";
 import DateFilter from "@/components/DateFilter";
 
-const PAGE_SIZE = 20;
+function TableSkeleton() {
+  return (
+    <>
+      {[...Array(2)].map((_, i) => (
+        <TableRow key={i}>
+          <TableCell>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-gray-100 animate-pulse shrink-0" />
+              <div className="h-3 bg-gray-100 animate-pulse rounded w-32" />
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="h-3 bg-gray-100 animate-pulse rounded w-40" />
+          </TableCell>
+          <TableCell>
+            <div className="h-3 bg-gray-100 animate-pulse rounded w-28" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
-export default function SubmissionsTable({ submissions }) {
+export default function SubmissionsTable({
+  submissions,
+  total,
+  totalPages,
+  currentPage,
+  limit,
+  initialSearch = "",
+}) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+
+  const [search, setSearch] = useState(initialSearch);
+  const [isDebouncing, setIsDebouncing] = useState(false);
   const [sortKey, setSortKey] = useState("submitted_at");
   const [sortDir, setSortDir] = useState("desc");
-  const [page, setPage] = useState(1);
   const [dateRange, setDateRange] = useState({ from: null, to: null });
+  const debounceRef = useRef(null);
 
-  const dateFiltered = useMemo(() => {
+  useEffect(() => {
+    setSearch(initialSearch);
+  }, [initialSearch]);
+
+  function handleSearchChange(value) {
+    setSearch(value);
+    setIsDebouncing(true);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setIsDebouncing(false);
+      const params = new URLSearchParams();
+      if (value) params.set("search", value);
+      params.set("page", "1");
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    }, 400);
+  }
+
+  function clearSearch() {
+    setSearch("");
+    setIsDebouncing(false);
+    clearTimeout(debounceRef.current);
+    startTransition(() => {
+      router.replace(pathname, { scroll: false });
+    });
+  }
+
+  function goToPage(page) {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", page);
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  }
+
+  const isLoading = isDebouncing || isPending;
+
+  const filtered = useMemo(() => {
     const { from, to } = dateRange;
     if (!from && !to) return submissions;
     return submissions.filter((s) => {
-      const ts = s.values?.submitted_at ?? new Date(s.createdAt).getTime();
+      const ts = new Date(s.submitted_at).getTime();
       if (from && ts < from.getTime()) return false;
       if (to && ts > to.getTime()) return false;
       return true;
     });
   }, [submissions, dateRange]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return dateFiltered.filter((s) => {
-      const { first_name = "", last_name = "", email = "" } = s.values ?? {};
-      return (
-        first_name.toLowerCase().includes(q) ||
-        last_name.toLowerCase().includes(q) ||
-        email.toLowerCase().includes(q)
-      );
-    });
-  }, [dateFiltered, search]);
-
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       let aVal, bVal;
       if (sortKey === "submitted_at") {
-        aVal = a.values?.submitted_at ?? 0;
-        bVal = b.values?.submitted_at ?? 0;
+        aVal = new Date(a.submitted_at).getTime();
+        bVal = new Date(b.submitted_at).getTime();
       } else if (sortKey === "name") {
-        aVal =
-          `${a.values?.first_name ?? ""} ${a.values?.last_name ?? ""}`.toLowerCase();
-        bVal =
-          `${b.values?.first_name ?? ""} ${b.values?.last_name ?? ""}`.toLowerCase();
+        aVal = `${a.first_name ?? ""} ${a.last_name ?? ""}`.toLowerCase();
+        bVal = `${b.first_name ?? ""} ${b.last_name ?? ""}`.toLowerCase();
       } else if (sortKey === "email") {
-        aVal = (a.values?.email ?? "").toLowerCase();
-        bVal = (b.values?.email ?? "").toLowerCase();
+        aVal = (a.email ?? "").toLowerCase();
+        bVal = (b.email ?? "").toLowerCase();
       }
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
   }, [filtered, sortKey, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function toggleSort(key) {
     if (sortKey === key) {
@@ -81,12 +141,6 @@ export default function SubmissionsTable({ submissions }) {
       setSortKey(key);
       setSortDir("asc");
     }
-    setPage(1);
-  }
-
-  function handleDateChange(range) {
-    setDateRange(range);
-    setPage(1);
   }
 
   function SortIcon({ colKey }) {
@@ -101,7 +155,7 @@ export default function SubmissionsTable({ submissions }) {
 
   return (
     <div>
-      <DateFilter onChange={handleDateChange} />
+      <DateFilter onChange={(range) => setDateRange(range)} />
 
       <Card>
         <CardHeader>
@@ -111,20 +165,35 @@ export default function SubmissionsTable({ submissions }) {
                 Submissions
               </CardTitle>
               <span className="text-xs text-muted-foreground">
-                {filtered.length} records
+                {isLoading ? (
+                  <span className="inline-block w-24 h-2.5 bg-gray-100 animate-pulse rounded" />
+                ) : (
+                  <>
+                    {total} result{total !== 1 ? "s" : ""}
+                    {search ? ` for "${search}"` : ""}
+                    {totalPages > 1
+                      ? ` · page ${currentPage} of ${totalPages}`
+                      : ""}
+                  </>
+                )}
               </span>
             </div>
-            <div className="relative w-52">
+            <div className="relative w-56">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search…"
+                placeholder="Search all submissions…"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-8 h-8 text-sm"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8 pr-8 h-8 text-sm"
               />
+              {search && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -153,35 +222,32 @@ export default function SubmissionsTable({ submissions }) {
             </TableHeader>
 
             <TableBody>
-              {paginated.length === 0 ? (
+              {isLoading ? (
+                <TableSkeleton />
+              ) : sorted.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={3}
                     className="text-center pt-8 pb-4 text-muted-foreground"
                   >
-                    No submissions found
+                    {search
+                      ? `No submissions found for "${search}"`
+                      : "No submissions found"}
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((s) => {
-                  const {
-                    first_name,
-                    last_name,
-                    email,
-                    submitted_at,
-                    submission_id,
-                  } = s.values ?? {};
+                sorted.map((s) => {
                   const fullName =
-                    [first_name, last_name].filter(Boolean).join(" ") || "—";
+                    [s.first_name, s.last_name].filter(Boolean).join(" ") ||
+                    "—";
                   const initial = (
-                    first_name?.[0] ??
-                    last_name?.[0] ??
+                    s.first_name?.[0] ??
+                    s.last_name?.[0] ??
                     "?"
                   ).toUpperCase();
-                  const slug = submission_id ?? s.id;
                   return (
                     <TableRow
-                      key={s.id}
+                      key={s.submission_id}
                       className="cursor-pointer transition-colors"
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.backgroundColor = "#f4f4f5")
@@ -189,7 +255,9 @@ export default function SubmissionsTable({ submissions }) {
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.backgroundColor = "")
                       }
-                      onClick={() => router.push(`/submissions/${slug}`)}
+                      onClick={() =>
+                        router.push(`/submissions/${s.submission_id}`)
+                      }
                     >
                       <TableCell>
                         <div className="flex items-center gap-2.5">
@@ -200,10 +268,10 @@ export default function SubmissionsTable({ submissions }) {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {email ?? "—"}
+                        {s.email ?? "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground tabular-nums text-xs">
-                        {formatDate(submitted_at)}
+                        {formatDate(s.submitted_at)}
                       </TableCell>
                     </TableRow>
                   );
@@ -212,27 +280,43 @@ export default function SubmissionsTable({ submissions }) {
             </TableBody>
           </Table>
 
-          {totalPages > 1 && (
+          {!isLoading && totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-3 border-t">
               <p className="text-xs text-muted-foreground">
-                Page {page} of {totalPages}
+                Page {currentPage} of {totalPages} · {total} total
               </p>
-              <div className="flex gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
                 >
                   Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
                 </Button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { fetchSubmissionById, fetchSubmissions } from "@/lib/api";
+import { fetchSubmissionById, fetchSubmissionsByEmail } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,7 +22,7 @@ export const revalidate = 10;
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const submission = await fetchSubmissionById(id);
-  const { first_name, last_name } = submission?.values ?? {};
+  const { first_name, last_name } = submission ?? {};
   const fullName =
     [first_name, last_name].filter(Boolean).join(" ") || "Unknown";
   return {
@@ -49,14 +49,14 @@ function Field({ label, value, mono = false }) {
 
 export default async function SubmissionDetailPage({ params }) {
   const { id } = await params;
-  let submission;
-  let allSubmissions = [];
+  let submission = null;
+  let emailSubmissions = [];
 
   try {
-    [submission, allSubmissions] = await Promise.all([
-      fetchSubmissionById(id),
-      fetchSubmissions(),
-    ]);
+    submission = await fetchSubmissionById(id);
+    if (submission?.email) {
+      emailSubmissions = await fetchSubmissionsByEmail(submission.email);
+    }
   } catch (e) {
     console.error("Failed to fetch submission:", e.message);
     notFound();
@@ -64,23 +64,32 @@ export default async function SubmissionDetailPage({ params }) {
 
   if (!submission) notFound();
 
-  const values = submission.values ?? {};
-  const { first_name, last_name, email, submitted_at, cart_data } = values;
+  const {
+    first_name,
+    last_name,
+    email,
+    submitted_at,
+    cart_data,
+    submission_id,
+  } = submission;
+
   const fullName =
     [first_name, last_name].filter(Boolean).join(" ") || "Unknown";
   const initials =
     [first_name?.[0], last_name?.[0]].filter(Boolean).join("").toUpperCase() ||
     "?";
+  const totalOrdersByEmail = emailSubmissions.length;
 
-  const totalOrdersByEmail = email
-    ? allSubmissions.filter((s) => s.values?.email === email).length
-    : null;
-
-  const { submission_id } = values;
-  const duplicates = submission_id
-    ? allSubmissions.filter((s) => s.values?.submission_id === submission_id)
-    : [];
+  // Check for duplicate submission_ids
+  const duplicates = emailSubmissions.filter(
+    (s) => s.submission_id === submission_id,
+  );
   const hasDuplicates = duplicates.length > 1;
+
+  // All scalar fields for the field values table (exclude cart_data)
+  const displayValues = Object.entries(submission).filter(
+    ([k]) => k !== "cart_data" && k !== "id",
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,8 +122,7 @@ export default async function SubmissionDetailPage({ params }) {
                 <code className="font-mono text-xs bg-amber-100 px-1 py-0.5 rounded">
                   {submission_id}
                 </code>
-                . Only the first match is shown. You may want to investigate and
-                remove the duplicate{duplicates.length > 2 ? "s" : ""} in HubDB.
+                . Only the first match is shown.
               </p>
             </div>
           </div>
@@ -123,6 +131,7 @@ export default async function SubmissionDetailPage({ params }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Left column */}
           <div className="space-y-4">
+            {/* Contact card */}
             <Card>
               <CardContent className="pt-6 text-center">
                 <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center text-lg font-semibold text-black mx-auto mb-4">
@@ -143,21 +152,12 @@ export default async function SubmissionDetailPage({ params }) {
                   {formatDate(submitted_at)}
                 </div>
                 <div className="mt-3">
-                  <Badge
-                    variant={
-                      submission.publishStatus === "PUBLISHED"
-                        ? "default"
-                        : "secondary"
-                    }
-                  >
-                    {submission.publishStatus === "PUBLISHED"
-                      ? "Cart Submitted"
-                      : (submission.publishStatus ?? "—")}
-                  </Badge>
+                  <Badge variant="default">Cart Submitted</Badge>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Metadata */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
@@ -166,27 +166,20 @@ export default async function SubmissionDetailPage({ params }) {
               </CardHeader>
               <CardContent>
                 <dl className="space-y-3">
-                  <Field label="Row ID" value={submission.id} mono />
+                  <Field label="Submission ID" value={submission_id} mono />
                   <Field
-                    label="Created"
-                    value={formatDate(submission.createdAt)}
-                  />
-                  <Field
-                    label="Updated"
-                    value={formatDate(submission.updatedAt)}
-                  />
-                  <Field
-                    label="Published"
-                    value={formatDate(submission.publishedAt)}
+                    label="Submitted At"
+                    value={formatDate(submitted_at)}
                   />
                   <Field
                     label="Total carts by this email"
-                    value={totalOrdersByEmail ?? "—"}
+                    value={totalOrdersByEmail}
                   />
                 </dl>
               </CardContent>
             </Card>
 
+            {/* All field values */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
@@ -202,41 +195,32 @@ export default async function SubmissionDetailPage({ params }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(values).length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={2}
-                          className="text-center pt-8 pb-4 text-muted-foreground"
-                        >
-                          No field values
+                    {displayValues.map(([key, value]) => (
+                      <TableRow key={key}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {key}
+                        </TableCell>
+                        <TableCell className="text-xs break-all">
+                          {key.endsWith("_at") &&
+                          (typeof value === "number" ||
+                            typeof value === "string") ? (
+                            formatDate(value)
+                          ) : typeof value === "object" && value !== null ? (
+                            <pre className="whitespace-pre-wrap text-[10px] text-muted-foreground">
+                              {JSON.stringify(value, null, 2)}
+                            </pre>
+                          ) : (
+                            String(value ?? "—")
+                          )}
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      Object.entries(values).map(([key, value]) => (
-                        <TableRow key={key}>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {key}
-                          </TableCell>
-                          <TableCell className="text-xs break-all">
-                            {key.endsWith("_at") &&
-                            typeof value === "number" ? (
-                              formatDate(value)
-                            ) : typeof value === "object" && value !== null ? (
-                              <pre className="whitespace-pre-wrap text-[10px] text-muted-foreground">
-                                {JSON.stringify(value, null, 2)}
-                              </pre>
-                            ) : (
-                              String(value ?? "—")
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
 
+            {/* Raw JSON */}
             <Card>
               <details className="group">
                 <summary className="list-none cursor-pointer px-6 py-4 flex items-center justify-between">
@@ -257,6 +241,7 @@ export default async function SubmissionDetailPage({ params }) {
 
           {/* Right column */}
           <div className="lg:col-span-2 space-y-4">
+            {/* cart_data is already a parsed object from the new API */}
             <CartDataSection cartData={cart_data ?? null} />
           </div>
         </div>

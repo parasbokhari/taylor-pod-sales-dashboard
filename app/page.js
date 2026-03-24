@@ -1,4 +1,4 @@
-import { fetchSubmissions } from "@/lib/api";
+import { fetchSubmissions, fetchAllSubmissions } from "@/lib/api";
 import StatsCards from "@/components/StatsCards";
 import SubmissionsChart from "@/components/SubmissionsChart";
 import SubmissionsTable from "@/components/SubmissionsTable";
@@ -8,12 +8,27 @@ import Image from "next/image";
 
 export const revalidate = 10;
 
-export default async function DashboardPage() {
-  let submissions = [];
+const PAGE_LIMIT = 25;
+
+export default async function DashboardPage({ searchParams }) {
+  const { page: pageParam, search: searchParam } = await searchParams;
+  const currentSearch = searchParam || "";
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
+
+  let pageData = { submissions: [], total: 0, total_pages: 1 };
+  let allSubmissions = [];
   let error = null;
 
   try {
-    submissions = await fetchSubmissions();
+    // Fetch current page for the table + all submissions for stats/chart in parallel
+    [pageData, allSubmissions] = await Promise.all([
+      fetchSubmissions({
+        page: currentPage,
+        limit: PAGE_LIMIT,
+        search: currentSearch,
+      }),
+      fetchAllSubmissions(),
+    ]);
   } catch (e) {
     error = e.message;
   }
@@ -57,15 +72,25 @@ export default async function DashboardPage() {
         <div className="mb-6">
           <h1 className="text-xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            HubDB table · {submissions.length} total records
+            {pageData.total} total submissions
           </p>
         </div>
 
         <Separator className="mb-6" />
 
-        <StatsCards submissions={submissions} />
-        <SubmissionsChart submissions={submissions} />
-        <SubmissionsTable submissions={submissions} />
+        {/* Stats + chart use all submissions for accuracy */}
+        <StatsCards submissions={allSubmissions} />
+        <SubmissionsChart submissions={allSubmissions} />
+
+        {/* Table uses paginated data */}
+        <SubmissionsTable
+          submissions={pageData.submissions}
+          total={pageData.total}
+          totalPages={pageData.total_pages}
+          currentPage={currentPage}
+          limit={PAGE_LIMIT}
+          initialSearch={currentSearch}
+        />
       </main>
     </div>
   );
