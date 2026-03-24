@@ -26,7 +26,7 @@ import DateFilter from "@/components/DateFilter";
 function TableSkeleton() {
   return (
     <>
-      {[...Array(2)].map((_, i) => (
+      {[...Array(4)].map((_, i) => (
         <TableRow key={i}>
           <TableCell>
             <div className="flex items-center gap-2.5">
@@ -65,9 +65,14 @@ export default function SubmissionsTable({
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const debounceRef = useRef(null);
 
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
-    setSearch(initialSearch);
-  }, [initialSearch]);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      setSearch(initialSearch);
+    }
+  }, []);
 
   function handleSearchChange(value) {
     setSearch(value);
