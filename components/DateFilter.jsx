@@ -71,15 +71,17 @@ export default function DateFilter({ onChange }) {
     <div className="flex flex-wrap items-center gap-2 mb-6">
       {/* Preset buttons */}
       {PRESETS.map((p) => (
-        <Button
+        <button
           key={p.days}
-          variant={activePreset === p.days ? "default" : "outline"}
-          size="sm"
           onClick={() => applyPreset(p.days)}
-          className={activePreset === p.days ? "shadow-sm" : ""}
+          className={`px-3 py-1.5 text-xs rounded-lg border transition-colors cursor-pointer ${
+            activePreset === p.days
+              ? "bg-gray-100 text-foreground border-gray-300 font-medium"
+              : "bg-white text-muted-foreground border-border hover:border-gray-300 hover:text-foreground"
+          }`}
         >
           {p.label}
-        </Button>
+        </button>
       ))}
 
       <div className="h-5 w-px bg-border" />

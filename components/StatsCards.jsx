@@ -1,55 +1,87 @@
-"use client";
-
 import { Users, TrendingUp, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchStats } from "@/lib/api";
 
-export default function StatsCards({ submissions }) {
-  const total = submissions.length;
-  const now = Date.now();
+// Server component — fetches stats directly
+export default async function StatsCards({ totalSubmissions }) {
+  let stats7d = null;
+  let stats30d = null;
 
-  const last7Days = submissions.filter((s) => {
-    const ts = new Date(s.submitted_at).getTime();
-    return now - ts < 7 * 24 * 60 * 60 * 1000;
-  }).length;
+  try {
+    [stats7d, stats30d] = await Promise.all([
+      fetchStats("7d"),
+      fetchStats("30d"),
+    ]);
+  } catch (e) {
+    console.error("Failed to fetch stats:", e.message);
+  }
 
-  const last30Days = submissions.filter((s) => {
-    const ts = new Date(s.submitted_at).getTime();
-    return now - ts < 30 * 24 * 60 * 60 * 1000;
-  }).length;
-
-  const stats = [
-    { label: "Total Submissions", value: total, icon: Users, note: "All time" },
+  const cards = [
+    {
+      label: "Total Submissions",
+      icon: Users,
+      primary: totalSubmissions,
+      primaryNote: "All time",
+      extras: null,
+    },
     {
       label: "Last 7 Days",
-      value: last7Days,
       icon: TrendingUp,
-      note: "Past week",
+      primary: stats7d?.submissions ?? "—",
+      primaryNote: "submissions",
+      extras: stats7d
+        ? [
+            { label: "Products", value: stats7d.total_products },
+            { label: "SKUs", value: stats7d.total_skus },
+          ]
+        : null,
     },
     {
       label: "Last 30 Days",
-      value: last30Days,
       icon: Clock,
-      note: "Past month",
+      primary: stats30d?.submissions ?? "—",
+      primaryNote: "submissions",
+      extras: stats30d
+        ? [
+            { label: "Products", value: stats30d.total_products },
+            { label: "SKUs", value: stats30d.total_skus },
+          ]
+        : null,
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
+      {cards.map((card) => {
+        const Icon = card.icon;
         return (
-          <Card key={stat.label}>
+          <Card key={card.label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
+                {card.label}
               </CardTitle>
               <Icon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold tabular-nums">
-                {stat.value}
+                {card.primary}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">{stat.note}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {card.primaryNote}
+              </p>
+
+              {card.extras && (
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border">
+                  {card.extras.map((e) => (
+                    <div key={e.label}>
+                      <p className="text-sm font-semibold tabular-nums">
+                        {e.value}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{e.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         );

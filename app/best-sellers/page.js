@@ -1,40 +1,28 @@
-import { fetchSubmissions, fetchAllSubmissions } from "@/lib/api";
-import StatsCards from "@/components/StatsCards";
-import SubmissionsChart from "@/components/SubmissionsChart";
-import SubmissionsTable from "@/components/SubmissionsTable";
-import AutoRefresh from "@/components/AutoRefresh";
+import { fetchBestsellers } from "@/lib/api";
+import BestSellersTable from "@/components/BestSellersTable";
 import AppNav from "@/components/AppNav";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 
-export const revalidate = 10;
+export const revalidate = 60;
 
-const PAGE_LIMIT = 25;
+export const metadata = {
+  title: "Best Sellers | Print on Demand Catalog | Taylor",
+};
 
-export default async function DashboardPage({ searchParams }) {
-  const { page: pageParam, search: searchParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
-  const currentSearch = searchParam || "";
-
-  let pageData = { submissions: [], total: 0, total_pages: 1 };
-  let allSubmissions = [];
+export default async function BestSellersPage() {
+  let initialData = null;
   let error = null;
 
   try {
-    [pageData, allSubmissions] = await Promise.all([
-      fetchSubmissions({
-        page: currentPage,
-        limit: PAGE_LIMIT,
-        search: currentSearch,
-      }),
-      fetchAllSubmissions(),
-    ]);
+    initialData = await fetchBestsellers("30d", 40);
   } catch (e) {
     error = e.message;
   }
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="bg-background border-b">
         <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -55,40 +43,29 @@ export default async function DashboardPage({ searchParams }) {
               Cart Submissions
             </span>
           </div>
-          <span className="text-xs text-muted-foreground">
-            Auto-refreshes every 30s
-          </span>
         </div>
       </header>
+
+      {/* Tab nav */}
       <AppNav />
-      <AutoRefresh intervalMs={30000} />
 
       <main className="max-w-screen-xl mx-auto px-6 py-8">
         {error && (
           <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-4 mb-6 text-sm">
-            Failed to load submissions: {error}
+            Failed to load bestsellers: {error}
           </div>
         )}
 
         <div className="mb-6">
-          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <h1 className="text-xl font-semibold">Best Sellers</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {pageData.total} total submissions
+            Top 40 products by cart submissions
           </p>
         </div>
 
         <Separator className="mb-6" />
 
-        <StatsCards totalSubmissions={pageData.total} />
-        <SubmissionsChart submissions={allSubmissions} />
-        <SubmissionsTable
-          submissions={pageData.submissions}
-          total={pageData.total}
-          totalPages={pageData.total_pages}
-          currentPage={currentPage}
-          limit={PAGE_LIMIT}
-          initialSearch={currentSearch}
-        />
+        <BestSellersTable initialData={initialData} initialRange="30d" />
       </main>
     </div>
   );

@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
+import AppNav from "@/components/AppNav";
 
 function Skeleton({ className }) {
   return (
@@ -56,6 +57,8 @@ export default function DashboardLoading() {
           <Skeleton className="w-36 h-3" />
         </div>
       </header>
+
+      <AppNav />
 
       <main className="max-w-screen-xl mx-auto px-6 py-8">
         {/* Title */}
